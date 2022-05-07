@@ -20,15 +20,16 @@ struct Point {
 // GLOBAL VARIABLES
 // Hero starting position
 Point hero_pos(20, 9);
+Point enemies_positions[5];
+
 // Board size
 int board_width = 40;
 int board_height = 20;
 int number_of_enemies = 5;
 int end_game = false; 
 
-Point enemies_positions[5];
-Point previous_enemies_positions[5];
 
+// ----------------------------------------------------------------supporting-functions------------------------------------------------------------------
 
 Point get_random_enemy_position(int side){
 
@@ -135,6 +136,9 @@ Point next_point(Point point, int direction, int start_side){
 }
 
 
+// -----------------------------------------------------------functions-for-threads-----------------------------------------------------------------
+
+
 void *enemy_work(void *arguments){
 
     // the threat index (to update proper point in table)
@@ -171,32 +175,46 @@ void *enemy_work(void *arguments){
 };
 
 
+void *window_handle(void *arguments){
+
+    WINDOW *window = (WINDOW*)arguments;
+
+    while(true){
+
+        // We have to remember which points were printed out becouse we'll cover them sign (" ") after some time
+        Point enemies_positions_to_disp[5];
+        Point hero_position_to_disp = hero_pos;
+
+        // print enemies
+        for(int i = 0 ; i < number_of_enemies ; i++){
+            // store position of printing enemy
+            enemies_positions_to_disp[i] = enemies_positions[i];
+            // print enemy
+            mvwprintw(window, enemies_positions_to_disp[i].y, enemies_positions_to_disp[i].x, "E");
+        }
+        // print hero
+        mvwprintw(window, hero_position_to_disp.y, hero_position_to_disp.x, "H");
+        // refresh window to see result
+        wrefresh(window);
+        // wait some time to see result (Note: without this also works but I think we have bigger resource consumption)
+        usleep(1000);
+        
+        // covering printed out signs via " "
+        for(int i = 0 ; i < number_of_enemies ; i++){
+            mvwprintw(window, enemies_positions_to_disp[i].y, enemies_positions_to_disp[i].x, " ");
+        }
+        mvwprintw(window, hero_position_to_disp.y, hero_position_to_disp.x, " ");
+    }
+
+    return NULL;
+}
 
 
 
-// int main(void) {
-
-//     // // Create thread intended for printing status of the threads 
-//     // pthread_t simple_thread; 
-//     // int simple_thread_arg = 1;
-//     // //Start simple_thread
-//     // int create_correct = pthread_create(&simple_thread, NULL, perform_work, &simple_thread_arg);
-//     // // Zero if success
-//     // assert(!create_correct);
-//     // // Wait for thread 
-//     // int result_code = pthread_join(simple_thread, NULL);
-//     // assert(!result_code);
-//     return 0;
-// }
-
-
-// Note: draw side, draw place at line, drow direction,(additional we can draw speed)
-
+// --------------------------------------------------------------MAIN----------------------------------------------------------------------
 
 int main(){
    
-    int btn_ascii;
-
     initscr();
 
         // screen settings
@@ -204,29 +222,30 @@ int main(){
         noecho();       // don't write at console        
 
         // the last two values define the left top corner of board (y, x)
-        WINDOW *win = newwin(board_height, board_width ,0,60);
-        refresh();
+        WINDOW *win = newwin(board_height, board_width, 0, 60);
 
         // make border
         box(win, 0, 0);
         // game title print
         mvwprintw(win, 0, 10, "AVOID ENEMIES GAME");
-        // print the hero
-        mvwprintw(win, hero_pos.y, hero_pos.x, "H");
-        // display
-        wrefresh(win);
 
-        // Create working threads and start them
-        pthread_t threads[number_of_enemies];
-        int thread_args[number_of_enemies];
+        // Create enemies threads and start them
+        pthread_t enemies_threads[number_of_enemies];
+        int enemies_threads_args[number_of_enemies];
         int result_code;
         
         for (int i = 0; i < number_of_enemies; i++) {
-            thread_args[i] = i;
-            result_code = pthread_create(&threads[i], NULL, enemy_work, &thread_args[i]);
+            enemies_threads_args[i] = i;
+            result_code = pthread_create(&enemies_threads[i], NULL, enemy_work, &enemies_threads_args[i]);
             assert(!result_code);
         }
 
+        // Create next thread to handle printing out signs at board
+        pthread_t window_handler;
+        result_code = pthread_create(&window_handler, NULL, window_handle, win);
+        assert(!result_code);
+        
+        int btn_ascii;
         // capture the w,s,a,d buttons upon close the game via ESC button 
         // ASCII: w -> 119, s -> 115, a -> 97, d -> 100
         while( (btn_ascii = getch()) != 27 ){
@@ -234,10 +253,6 @@ int main(){
             // make operations only when correct button has been pressed
             if( (btn_ascii == 119)||(btn_ascii == 115)||(btn_ascii == 97)||(btn_ascii == 100) ){
 
-                // erase last hero's sign
-                mvwprintw(win, hero_pos.y, hero_pos.x, " ");
-
-                // calculate new one
                 switch(btn_ascii){
                     
                     case 97:
@@ -260,24 +275,8 @@ int main(){
                         if( hero_pos.y > board_height -2 ) hero_pos.y = board_height -2;
                         break;
                 }
-                // print hero at new position
-                mvwprintw(win, hero_pos.y, hero_pos.x, "H");
             }
-
-            // print enemies
-            for(int i = 0 ; i < number_of_enemies ; i++){
-                // erase last printed signs
-                mvwprintw(win, previous_enemies_positions[i].y, previous_enemies_positions[i].x, " ");
-                // print new signs
-                mvwprintw(win, enemies_positions[i].y, enemies_positions[i].x, "E");
-                previous_enemies_positions[i] = enemies_positions[i];
-            }
-
-            // display changes
-                wrefresh(win);
         }
-
-        // place for close threads
 
     endwin();
     return 0;
