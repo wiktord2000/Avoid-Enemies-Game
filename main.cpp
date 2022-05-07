@@ -8,16 +8,67 @@
 
 using namespace std;
 
-// void *perform_work(void *arguments){
-//     // The threat index
+
+struct Point {
+  int x;
+  int y;
+  Point(int a, int b) { this->x = a; this->y = b; }
+  // default
+  Point() {this->x = 1; this->y = 1;}
+};
+
+// GLOBAL VARIABLES
+// Hero starting position
+Point hero_pos(20, 9);
+// Board size
+int board_width = 40;
+int board_height = 20;
+int number_of_enemies = 5;
+int end_game = false; 
+
+Point enemies_positions[5];
+
+
+
+// void *enemy_work(void *arguments){
+
+//     // The threat index (to update proper point in table)
 //     int index = *((int *)arguments);
-//     char inputChar;
-//     while(true){
-//         inputChar = getch();
-//         cout<<inputChar;
-//         sleep(1);
-//     }
-// }
+
+//     // Draw the direction (0 - left front, 1 - front , 2 - right front) 
+//     int direction = rand() %3;
+// };
+
+
+Point get_random_enemy_position(){
+    
+    // Draw the side to render enemy( 0 - left, 1 - top, 2 - right, 3 - botton)
+    int side = rand() % 4; 
+
+    // Draw specific position on the side 
+    int side_position;
+
+    if((side == 0) || (side == 2)){
+        side_position = rand() % (board_height - 2) + 1;
+
+        if(side == 0){
+            return Point(1, side_position);
+        }
+        else{
+            return Point(board_width -2 , side_position);
+        }
+    }
+    else{
+        side_position = rand() % (board_width - 2) + 1;
+
+        if(side == 1){
+            return Point(side_position, 1);
+        }
+        else{
+            return Point(side_position, board_height -2);
+        }
+    }
+};
 
 
 // int main(void) {
@@ -35,22 +86,8 @@ using namespace std;
 //     return 0;
 // }
 
-struct Point {
-  int x;
-  int y;
-  Point(int a, int b) { this->x = a; this->y = b; }
-  Point() {this->x = 1; this->y = 1;}
-};
 
-// GLOBAL VARIABLES
-// Hero starting position
-Point hero_pos(20, 9);
-// Board size
-int board_width = 40;
-int board_height = 20;
-int number_of_enemies = 5;
-
-Point enemies_positions[5];
+// Note: draw side, draw place at line, drow direction,(additional we can draw speed)
 
 
 int main(){
@@ -61,7 +98,7 @@ int main(){
 
         // screen settings
         curs_set(0);    // don't display cursor
-        noecho();       // don't display clicked buttons        
+        noecho();       // don't write at console        
 
         // the last two values define the left top corner of board (y, x)
         WINDOW *win = newwin(board_height, board_width ,0,60);
@@ -120,11 +157,11 @@ int main(){
             }
 
             // variate enemies
-            enemies_positions[0] = Point(1,1);
-            enemies_positions[1] = Point(5,5);
-            enemies_positions[2] = Point(10,10);
-            enemies_positions[3] = Point(15,15);
-            enemies_positions[4] = Point(5,15);
+            enemies_positions[0] = get_random_enemy_position();
+            enemies_positions[1] = get_random_enemy_position();
+            enemies_positions[2] = get_random_enemy_position();
+            enemies_positions[3] = get_random_enemy_position();
+            enemies_positions[4] = get_random_enemy_position();
 
 
 
