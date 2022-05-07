@@ -35,15 +35,27 @@ using namespace std;
 //     return 0;
 // }
 
+struct Point {
+  int x;
+  int y;
+  Point(int a, int b) { this->x = a; this->y = b; }
+  Point() {this->x = 1; this->y = 1;}
+};
+
+// GLOBAL VARIABLES
+// Hero starting position
+Point hero_pos(20, 9);
+// Board size
+int board_width = 40;
+int board_height = 20;
+int number_of_enemies = 5;
+
+Point enemies_positions[5];
+
 
 int main(){
-    // Hero starting position
-    int hero_x = 20;
-    int hero_y = 9;
+   
     int btn_ascii;
-    int board_width = 40;
-    int board_height = 20;
-
 
     initscr();
 
@@ -60,9 +72,14 @@ int main(){
         // game title print
         mvwprintw(win, 0, 10, "AVOID ENEMIES GAME");
         // print the hero
-        mvwprintw(win, hero_y, hero_x, "H");
+        mvwprintw(win, hero_pos.y, hero_pos.x, "H");
         // display
         wrefresh(win);
+
+        
+
+
+
 
         // capture the w,s,a,d buttons upon close the game via ESC button 
         // ASCII: w -> 119, s -> 115, a -> 97, d -> 100
@@ -73,40 +90,54 @@ int main(){
             if( (btn_ascii == 119)||(btn_ascii == 115)||(btn_ascii == 97)||(btn_ascii == 100) ){
 
                 // erase last hero's position
-                mvwprintw(win, hero_y, hero_x, " ");
+                mvwprintw(win, hero_pos.y, hero_pos.x, " ");
 
                 // calculate new one
                 switch(btn_ascii){
                     
                     case 97:
-                        hero_x--;
-                        if( hero_x < 1 ) hero_x = 1;
+                        hero_pos.x--;
+                        if( hero_pos.x < 1 ) hero_pos.x = 1;
                         break;
 
                     case 100:
-                        hero_x++;
-                        if( hero_x > board_width -2 ) hero_x = board_width -2;
+                        hero_pos.x++;
+                        if( hero_pos.x > board_width -2 ) hero_pos.x = board_width -2;
                         break;
 
                     case 119:
-                        hero_y--;
-                        if( hero_y < 1 ) hero_y = 1;
+                        hero_pos.y--;
+                        if( hero_pos.y < 1 ) hero_pos.y = 1;
                         break;
 
                     case 115:
-                        hero_y++;
-                        if( hero_y > board_height -2 ) hero_y = board_height -2;
+                        hero_pos.y++;
+                        if( hero_pos.y > board_height -2 ) hero_pos.y = board_height -2;
                         break;
                 }
-
                 // print hero at new position
-                mvwprintw(win, hero_y, hero_x, "H");
-
-                // display changes
-                wrefresh(win);
+                mvwprintw(win, hero_pos.y, hero_pos.x, "H");
             }
 
+            // variate enemies
+            enemies_positions[0] = Point(1,1);
+            enemies_positions[1] = Point(5,5);
+            enemies_positions[2] = Point(10,10);
+            enemies_positions[3] = Point(15,15);
+            enemies_positions[4] = Point(5,15);
+
+
+
+            // print enemies
+            for(int i = 0 ; i < number_of_enemies ; i++){
+                mvwprintw(win, enemies_positions[i].y, enemies_positions[i].x, "E");
+            }
+
+            // display changes
+                wrefresh(win);
         }
+
+        // place for close threads
 
     endwin();
     return 0;
