@@ -59,7 +59,7 @@ Point get_random_enemy_position(int side){
 };
 
 bool is_the_wall(Point point){
-    // check that the poin belongs to any side 
+    // check that the point belongs to any side 
     if( (point.x == 0) || (point.x == (board_width - 1)) || (point.y == 0) || (point.y == (board_height - 1)) ){
         return true;
     }
@@ -67,9 +67,9 @@ bool is_the_wall(Point point){
 };
 
 Point next_point(Point point, int direction, int start_side){
+
     // Sides: 0 - left, 1 - top, 2 - right, 3 - botton
     // Directions: 0 - left front, 1 - front , 2 - right front 
-
     switch(start_side){
 
         case 0:
@@ -156,7 +156,10 @@ void *enemy_work(void *arguments){
         enemies_positions[index] = get_random_enemy_position(side);
 
         while(true){
-            usleep(100000);
+
+            // time to next move
+            usleep(1000000);
+
             // calculate next position 
             Point next_position = next_point(enemies_positions[index], direction, side);
             if(is_the_wall(next_position)){
@@ -167,6 +170,7 @@ void *enemy_work(void *arguments){
                 enemies_positions[index] = next_position;
             }
         }
+
         // time to return on the board 
         usleep(1000000);
     }
@@ -196,8 +200,8 @@ void *window_handle(void *arguments){
         mvwprintw(window, hero_position_to_disp.y, hero_position_to_disp.x, "H");
         // refresh window to see result
         wrefresh(window);
-        // wait some time to see result (Note: without this also works but I think we have bigger resource consumption)
-        usleep(1000);
+        // wait some time to see result (Note: this value is important and can't be to small because without this the window'll not displaying properly )
+        usleep(10000);
         
         // covering printed out signs via " "
         for(int i = 0 ; i < number_of_enemies ; i++){
@@ -209,6 +213,71 @@ void *window_handle(void *arguments){
     return NULL;
 }
 
+void *check_collidation_with_enemies(void *arguments){
+
+    WINDOW *window = (WINDOW*)arguments;
+
+    while(true){
+
+        for(int i = 0 ; i < number_of_enemies ; i++){
+
+            if( enemies_positions[i].x == hero_pos.x && enemies_positions[i].y == hero_pos.y ){
+
+                mvwprintw(window, hero_pos.y + 1, hero_pos.x, "@");
+                mvwprintw(window, hero_pos.y - 1, hero_pos.x, "@");
+                mvwprintw(window, hero_pos.y, hero_pos.x - 1, "@");
+                mvwprintw(window, hero_pos.y, hero_pos.x + 1, "@");
+                mvwprintw(window, hero_pos.y, hero_pos.x, "@");
+                mvwprintw(window, 9, 10, "  ---GAME OVER!---  ");
+                end_game = true;
+                return NULL;
+            }
+        }
+    }
+
+    return NULL;
+}
+
+
+void *keyboard_handle(void *arguments){
+
+    WINDOW *window = (WINDOW*)arguments;
+    int btn_ascii;
+    // capture the w,s,a,d buttons upon close the game via ESC button 
+    // ASCII: w -> 119, s -> 115, a -> 97, d -> 100
+    while( (btn_ascii = wgetch(window)) != 27 ){
+
+        // make operations only when correct button has been pressed
+        if( (btn_ascii == 119)||(btn_ascii == 115)||(btn_ascii == 97)||(btn_ascii == 100) ){
+
+            switch(btn_ascii){
+                
+                case 97:
+                    hero_pos.x--;
+                    if( hero_pos.x < 1 ) hero_pos.x = 1;
+                    break;
+
+                case 100:
+                    hero_pos.x++;
+                    if( hero_pos.x > board_width -2 ) hero_pos.x = board_width -2;
+                    break;
+
+                case 119:
+                    hero_pos.y--;
+                    if( hero_pos.y < 1 ) hero_pos.y = 1;
+                    break;
+
+                case 115:
+                    hero_pos.y++;
+                    if( hero_pos.y > board_height -2 ) hero_pos.y = board_height -2;
+                    break;
+            }
+        }
+    }
+
+    end_game = true;
+    return NULL;
+}
 
 
 // --------------------------------------------------------------MAIN----------------------------------------------------------------------
@@ -224,10 +293,10 @@ int main(){
         // the last two values define the left top corner of board (y, x)
         WINDOW *win = newwin(board_height, board_width, 0, 60);
 
-        // make border
         box(win, 0, 0);
         // game title print
         mvwprintw(win, 0, 10, "AVOID ENEMIES GAME");
+
 
         // Create enemies threads and start them
         pthread_t enemies_threads[number_of_enemies];
@@ -244,38 +313,31 @@ int main(){
         pthread_t window_handler;
         result_code = pthread_create(&window_handler, NULL, window_handle, win);
         assert(!result_code);
-        
-        int btn_ascii;
-        // capture the w,s,a,d buttons upon close the game via ESC button 
-        // ASCII: w -> 119, s -> 115, a -> 97, d -> 100
-        while( (btn_ascii = getch()) != 27 ){
 
-            // make operations only when correct button has been pressed
-            if( (btn_ascii == 119)||(btn_ascii == 115)||(btn_ascii == 97)||(btn_ascii == 100) ){
+        // Create next thread to handle keyboard
+        pthread_t keyboard_handler;
+        result_code = pthread_create(&keyboard_handler, NULL, keyboard_handle, win);
+        assert(!result_code);
 
-                switch(btn_ascii){
-                    
-                    case 97:
-                        hero_pos.x--;
-                        if( hero_pos.x < 1 ) hero_pos.x = 1;
-                        break;
+        // Create thread to control collidation with enemies
+        pthread_t collidation_handler;
+        result_code = pthread_create(&collidation_handler, NULL, check_collidation_with_enemies, win);
+        assert(!result_code);
 
-                    case 100:
-                        hero_pos.x++;
-                        if( hero_pos.x > board_width -2 ) hero_pos.x = board_width -2;
-                        break;
+        while(true){
+            if(end_game){
+                pthread_cancel(window_handler);
+                pthread_join(window_handler, NULL);
 
-                    case 119:
-                        hero_pos.y--;
-                        if( hero_pos.y < 1 ) hero_pos.y = 1;
-                        break;
-
-                    case 115:
-                        hero_pos.y++;
-                        if( hero_pos.y > board_height -2 ) hero_pos.y = board_height -2;
-                        break;
-                }
-            }
+                // wclear(win);
+                // // make border
+                // box(win, 0, 0);
+                // // game title print
+                // mvwprintw(win, 0, 10, "AVOID ENEMIES GAME");
+                // mvwprintw(win, 20, 10, "GAME OVER!");
+                wgetch(win);
+                break;
+            } 
         }
 
     endwin();
