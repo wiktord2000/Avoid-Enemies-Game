@@ -8,6 +8,7 @@
 
 using namespace std;
 
+// -----------Structures---------
 
 struct Point {
   int x;
@@ -17,17 +18,17 @@ struct Point {
   Point() {this->x = -1; this->y = -1;}
 };
 
-// GLOBAL VARIABLES
-// Hero starting position
-Point hero_pos(20, 9);
-Point enemies_positions[5];
+// -------GLOBAL VARIABLES-------
 
-// Board size
-int board_width = 40;
-int board_height = 20;
-int number_of_enemies = 5;
+const int number_of_enemies = 10;
 int end_game = false; 
 
+Point hero_pos(20, 9);                          // Hero starting position
+Point enemies_positions[number_of_enemies];     // Array to store positions of enemies
+
+int board_width = 40;                           // Board size
+int board_height = 20;
+int scores = 0;
 
 // ----------------------------------------------------------------supporting-functions------------------------------------------------------------------
 
@@ -158,7 +159,7 @@ void *enemy_work(void *arguments){
         while(true){
 
             // time to next move
-            usleep(1000000);
+            usleep(100000);
 
             // calculate next position 
             Point next_position = next_point(enemies_positions[index], direction, side);
@@ -182,11 +183,12 @@ void *enemy_work(void *arguments){
 void *window_handle(void *arguments){
 
     WINDOW *window = (WINDOW*)arguments;
+    string scoresAsString;
 
     while(true){
 
         // We have to remember which points were printed out becouse we'll cover them sign (" ") after some time
-        Point enemies_positions_to_disp[5];
+        Point enemies_positions_to_disp[number_of_enemies];
         Point hero_position_to_disp = hero_pos;
 
         // print enemies
@@ -198,6 +200,9 @@ void *window_handle(void *arguments){
         }
         // print hero
         mvwprintw(window, hero_position_to_disp.y, hero_position_to_disp.x, "H");
+        // print score
+        scoresAsString = " Score: " + to_string(scores) + " ";
+        mvwprintw(window, 19, 15, scoresAsString.c_str());
         // refresh window to see result
         wrefresh(window);
         // wait some time to see result (Note: this value is important and can't be to small because without this the window'll not displaying properly )
@@ -279,6 +284,17 @@ void *keyboard_handle(void *arguments){
     return NULL;
 }
 
+void *count_points(void *arguments){
+
+    while(true){
+        // Adds one point after one second
+        sleep(1);
+        scores += 1;
+    }
+    
+    return NULL;
+}
+
 
 // --------------------------------------------------------------MAIN----------------------------------------------------------------------
 
@@ -295,7 +311,7 @@ int main(){
 
         box(win, 0, 0);
         // game title print
-        mvwprintw(win, 0, 10, "AVOID ENEMIES GAME");
+        mvwprintw(win, 0, 10, " AVOID ENEMIES GAME ");
 
 
         // Create enemies threads and start them
@@ -324,10 +340,17 @@ int main(){
         result_code = pthread_create(&collidation_handler, NULL, check_collidation_with_enemies, win);
         assert(!result_code);
 
+        // Create thread intended for couning points
+        pthread_t points_handler;
+        result_code = pthread_create(&points_handler, NULL, count_points, NULL);
+        assert(!result_code);
+
         while(true){
             if(end_game){
                 pthread_cancel(window_handler);
                 pthread_join(window_handler, NULL);
+                pthread_cancel(points_handler);
+                pthread_join(points_handler, NULL);
 
                 // wclear(win);
                 // // make border
