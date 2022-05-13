@@ -20,7 +20,7 @@ struct Point {
 
 // -------GLOBAL VARIABLES-------
 
-const int number_of_enemies = 10;
+const int number_of_enemies = 20;
 int end_game = false; 
 
 Point hero_pos(20, 9);                          // Hero starting position
@@ -60,7 +60,7 @@ Point get_random_enemy_position(int side){
 };
 
 bool is_the_wall(Point point){
-    // check that the point belongs to any side 
+    // Check that the point belongs to any side 
     if( (point.x == 0) || (point.x == (board_width - 1)) || (point.y == 0) || (point.y == (board_height - 1)) ){
         return true;
     }
@@ -142,26 +142,26 @@ Point next_point(Point point, int direction, int start_side){
 
 void *enemy_work(void *arguments){
 
-    // the threat index (to update proper point in table)
+    // The threat index (to update proper point in table)
     int index = *((int *)arguments);
 
     while(true){
 
-        // draw the direction (0 - left front, 1 - front , 2 - right front) 
+        // Draw the direction (0 - left front, 1 - front , 2 - right front) 
         int direction = rand() %3;
 
-        // draw the side to render enemy( 0 - left, 1 - top, 2 - right, 3 - botton)
+        // Draw the side to render enemy( 0 - left, 1 - top, 2 - right, 3 - botton)
         int side = rand() % 4; 
 
-        // update table with positions of enemies (starting position)
+        // Update table with positions of enemies (starting position)
         enemies_positions[index] = get_random_enemy_position(side);
 
         while(true){
 
-            // time to next move
+            // Time to next move
             usleep(100000);
 
-            // calculate next position 
+            // Calculate next position 
             Point next_position = next_point(enemies_positions[index], direction, side);
             if(is_the_wall(next_position)){
                 enemies_positions[index] = Point(-1,-1);
@@ -172,7 +172,7 @@ void *enemy_work(void *arguments){
             }
         }
 
-        // time to return on the board 
+        // Time to return on the board 
         usleep(1000000);
     }
 
@@ -191,24 +191,24 @@ void *window_handle(void *arguments){
         Point enemies_positions_to_disp[number_of_enemies];
         Point hero_position_to_disp = hero_pos;
 
-        // print enemies
+        // Print enemies
         for(int i = 0 ; i < number_of_enemies ; i++){
-            // store position of printing enemy
+            // Store position of printing enemy
             enemies_positions_to_disp[i] = enemies_positions[i];
-            // print enemy
+            // Print enemy
             mvwprintw(window, enemies_positions_to_disp[i].y, enemies_positions_to_disp[i].x, "E");
         }
-        // print hero
+        // Print hero
         mvwprintw(window, hero_position_to_disp.y, hero_position_to_disp.x, "H");
-        // print score
+        // Print score
         scoresAsString = " Score: " + to_string(scores) + " ";
         mvwprintw(window, 19, 15, scoresAsString.c_str());
-        // refresh window to see result
+        // Refresh window to see result
         wrefresh(window);
-        // wait some time to see result (Note: this value is important and can't be to small because without this the window'll not displaying properly )
+        // Wait some time to see result (Note: this value is important and can't be to small because without this the window'll not displaying properly )
         usleep(10000);
         
-        // covering printed out signs via " "
+        // Covering printed out signs via " "
         for(int i = 0 ; i < number_of_enemies ; i++){
             mvwprintw(window, enemies_positions_to_disp[i].y, enemies_positions_to_disp[i].x, " ");
         }
@@ -233,7 +233,9 @@ void *check_collidation_with_enemies(void *arguments){
                 mvwprintw(window, hero_pos.y, hero_pos.x - 1, "@");
                 mvwprintw(window, hero_pos.y, hero_pos.x + 1, "@");
                 mvwprintw(window, hero_pos.y, hero_pos.x, "@");
-                mvwprintw(window, 9, 10, "  ---GAME OVER!---  ");
+                mvwprintw(window, 8, 9,  "  ------------------  ");
+                mvwprintw(window, 9, 9,  "  -- GAME OVER!!! --  ");
+                mvwprintw(window, 10, 9, "  ------------------  ");
                 end_game = true;
                 return NULL;
             }
@@ -248,7 +250,7 @@ void *keyboard_handle(void *arguments){
 
     WINDOW *window = (WINDOW*)arguments;
     int btn_ascii;
-    // capture the w,s,a,d buttons upon close the game via ESC button 
+    // Capture the w,s,a,d buttons upon close the game via ESC button 
     // ASCII: w -> 119, s -> 115, a -> 97, d -> 100
     while( (btn_ascii = wgetch(window)) != 27 ){
 
@@ -302,15 +304,15 @@ int main(){
    
     initscr();
 
-        // screen settings
-        curs_set(0);    // don't display cursor
-        noecho();       // don't write at console        
+        // Screen settings
+        curs_set(0);    // Don't display cursor
+        noecho();       // Don't write at console        
 
-        // the last two values define the left top corner of board (y, x)
+        // The last two values define the left top corner of board (y, x)
         WINDOW *win = newwin(board_height, board_width, 0, 60);
 
         box(win, 0, 0);
-        // game title print
+        // Game title print
         mvwprintw(win, 0, 10, " AVOID ENEMIES GAME ");
 
 
@@ -347,8 +349,23 @@ int main(){
 
         while(true){
             if(end_game){
+
+                // Cancel threads
+
+                for (int i = 0; i < number_of_enemies; i++) {
+                    pthread_cancel(enemies_threads[i]);
+                    pthread_join(enemies_threads[i], NULL);
+                }
+
                 pthread_cancel(window_handler);
                 pthread_join(window_handler, NULL);
+
+                pthread_cancel(keyboard_handler);
+                pthread_join(keyboard_handler, NULL);
+
+                pthread_cancel(collidation_handler);
+                pthread_join(collidation_handler, NULL);
+
                 pthread_cancel(points_handler);
                 pthread_join(points_handler, NULL);
 
