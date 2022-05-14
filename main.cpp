@@ -136,6 +136,23 @@ Point next_point(Point point, int direction, int start_side){
     return Point(-1, -1);
 }
 
+void print_end_game(WINDOW* window){
+
+    mvwprintw(window, hero_pos.y + 1, hero_pos.x + 1, " ");
+                mvwprintw(window, hero_pos.y - 1, hero_pos.x - 1, " ");
+                mvwprintw(window, hero_pos.y + 1, hero_pos.x - 1, " ");
+                mvwprintw(window, hero_pos.y - 1, hero_pos.x + 1, " ");
+
+
+                mvwprintw(window, hero_pos.y + 1, hero_pos.x, "#");
+                mvwprintw(window, hero_pos.y - 1, hero_pos.x, "#");
+                mvwprintw(window, hero_pos.y, hero_pos.x - 1, "#");
+                mvwprintw(window, hero_pos.y, hero_pos.x + 1, "#");
+                mvwprintw(window, hero_pos.y, hero_pos.x, "#");
+                mvwprintw(window, 8, 9,  "  ------------------  ");
+                mvwprintw(window, 9, 9,  "  -- GAME OVER!!! --  ");
+                mvwprintw(window, 10, 9, "  ------------------  ");
+}
 
 // -----------------------------------------------------------functions-for-threads-----------------------------------------------------------------
 
@@ -227,15 +244,7 @@ void *check_collidation_with_enemies(void *arguments){
         for(int i = 0 ; i < number_of_enemies ; i++){
 
             if( enemies_positions[i].x == hero_pos.x && enemies_positions[i].y == hero_pos.y ){
-
-                mvwprintw(window, hero_pos.y + 1, hero_pos.x, "@");
-                mvwprintw(window, hero_pos.y - 1, hero_pos.x, "@");
-                mvwprintw(window, hero_pos.y, hero_pos.x - 1, "@");
-                mvwprintw(window, hero_pos.y, hero_pos.x + 1, "@");
-                mvwprintw(window, hero_pos.y, hero_pos.x, "@");
-                mvwprintw(window, 8, 9,  "  ------------------  ");
-                mvwprintw(window, 9, 9,  "  -- GAME OVER!!! --  ");
-                mvwprintw(window, 10, 9, "  ------------------  ");
+                // When collision -> end game
                 end_game = true;
                 return NULL;
             }
@@ -254,7 +263,7 @@ void *keyboard_handle(void *arguments){
     // ASCII: w -> 119, s -> 115, a -> 97, d -> 100
     while( (btn_ascii = wgetch(window)) != 27 ){
 
-        // make operations only when correct button has been pressed
+        // Make operations only when correct button has been pressed
         if( (btn_ascii == 119)||(btn_ascii == 115)||(btn_ascii == 97)||(btn_ascii == 100) ){
 
             switch(btn_ascii){
@@ -296,7 +305,6 @@ void *count_points(void *arguments){
     
     return NULL;
 }
-
 
 // --------------------------------------------------------------MAIN----------------------------------------------------------------------
 
@@ -369,13 +377,16 @@ int main(){
                 pthread_cancel(points_handler);
                 pthread_join(points_handler, NULL);
 
-                // wclear(win);
-                // // make border
-                // box(win, 0, 0);
-                // // game title print
-                // mvwprintw(win, 0, 10, "AVOID ENEMIES GAME");
-                // mvwprintw(win, 20, 10, "GAME OVER!");
-                wgetch(win);
+
+                print_end_game(win);
+
+                int ascii;
+                // Finish when ESC
+                while((ascii = wgetch(win)) != 27){
+
+                    cout<<ascii;
+                }
+
                 break;
             } 
         }
@@ -384,3 +395,5 @@ int main(){
     return 0;
 
 }
+
+
