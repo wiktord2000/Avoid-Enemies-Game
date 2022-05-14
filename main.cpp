@@ -139,19 +139,20 @@ Point next_point(Point point, int direction, int start_side){
 void print_end_game(WINDOW* window){
 
     mvwprintw(window, hero_pos.y + 1, hero_pos.x + 1, " ");
-                mvwprintw(window, hero_pos.y - 1, hero_pos.x - 1, " ");
-                mvwprintw(window, hero_pos.y + 1, hero_pos.x - 1, " ");
-                mvwprintw(window, hero_pos.y - 1, hero_pos.x + 1, " ");
+    mvwprintw(window, hero_pos.y - 1, hero_pos.x - 1, " ");
+    mvwprintw(window, hero_pos.y + 1, hero_pos.x - 1, " ");
+    mvwprintw(window, hero_pos.y - 1, hero_pos.x + 1, " ");
 
 
-                mvwprintw(window, hero_pos.y + 1, hero_pos.x, "#");
-                mvwprintw(window, hero_pos.y - 1, hero_pos.x, "#");
-                mvwprintw(window, hero_pos.y, hero_pos.x - 1, "#");
-                mvwprintw(window, hero_pos.y, hero_pos.x + 1, "#");
-                mvwprintw(window, hero_pos.y, hero_pos.x, "#");
-                mvwprintw(window, 8, 9,  "  ------------------  ");
-                mvwprintw(window, 9, 9,  "  -- GAME OVER!!! --  ");
-                mvwprintw(window, 10, 9, "  ------------------  ");
+    mvwprintw(window, hero_pos.y + 1, hero_pos.x, "#");
+    mvwprintw(window, hero_pos.y - 1, hero_pos.x, "#");
+    mvwprintw(window, hero_pos.y, hero_pos.x - 1, "#");
+    mvwprintw(window, hero_pos.y, hero_pos.x + 1, "#");
+    mvwprintw(window, hero_pos.y, hero_pos.x, "#");
+    mvwprintw(window, 8, 9,  "  ------------------  ");
+    mvwprintw(window, 9, 9,  "  -- GAME OVER!!! --  ");
+    mvwprintw(window, 10, 9, "  ------------------  ");
+    wrefresh(window);
 }
 
 // -----------------------------------------------------------functions-for-threads-----------------------------------------------------------------
@@ -322,7 +323,14 @@ int main(){
         box(win, 0, 0);
         // Game title print
         mvwprintw(win, 0, 10, " AVOID ENEMIES GAME ");
+        mvwprintw(win, 9, 9, " Press ENTER to start! ");
+        wrefresh(win);
 
+        while(wgetch(win) != 10);
+
+        // Erase string
+        mvwprintw(win, 9, 10, "                       ");
+        wrefresh(win);
 
         // Create enemies threads and start them
         pthread_t enemies_threads[number_of_enemies];
