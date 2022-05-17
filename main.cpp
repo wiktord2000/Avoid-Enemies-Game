@@ -32,6 +32,18 @@ int scores = 0;
 
 // ----------------------------------------------------------------supporting-functions------------------------------------------------------------------
 
+void restart_global_data(){
+
+    hero_pos = Point(20, 9);
+    for(int i = 0 ; i< number_of_enemies ; i++){
+        enemies_positions[i] = Point();
+    }
+    end_game = false;
+    scores = 0;
+}
+
+
+
 Point get_random_enemy_position(int side){
 
     // Draw specific position on the side 
@@ -138,21 +150,36 @@ Point next_point(Point point, int direction, int start_side){
 
 void print_end_game(WINDOW* window){
 
+
+    // Print blur at hero position
     mvwprintw(window, hero_pos.y + 1, hero_pos.x + 1, " ");
     mvwprintw(window, hero_pos.y - 1, hero_pos.x - 1, " ");
     mvwprintw(window, hero_pos.y + 1, hero_pos.x - 1, " ");
     mvwprintw(window, hero_pos.y - 1, hero_pos.x + 1, " ");
-
-
     mvwprintw(window, hero_pos.y + 1, hero_pos.x, "#");
     mvwprintw(window, hero_pos.y - 1, hero_pos.x, "#");
     mvwprintw(window, hero_pos.y, hero_pos.x - 1, "#");
     mvwprintw(window, hero_pos.y, hero_pos.x + 1, "#");
     mvwprintw(window, hero_pos.y, hero_pos.x, "#");
+
+    // Game over in center
     mvwprintw(window, 8, 9,  "  ------------------  ");
     mvwprintw(window, 9, 9,  "  -- GAME OVER!!! --  ");
     mvwprintw(window, 10, 9, "  ------------------  ");
     wrefresh(window);
+
+    // Restart global data (prepare for possible game restart)
+    restart_global_data();
+    usleep(500000);
+
+    // Print finish or restart message
+    wclear(window);
+    box(window, 0, 0);
+    mvwprintw(window, 0, 10, " AVOID ENEMIES GAME ");
+    mvwprintw(window, 8, 8, " Press SPACE to Restart! ");
+    mvwprintw(window, 9, 9, " Press ESC to Finish! ");
+    wrefresh(window);
+
 }
 
 // -----------------------------------------------------------functions-for-threads-----------------------------------------------------------------
@@ -300,7 +327,7 @@ void *count_points(void *arguments){
 
     while(true){
         // Adds one point after one second
-        sleep(1);
+        usleep(1000000);
         scores += 1;
     }
     
@@ -319,85 +346,91 @@ int main(){
 
         // The last two values define the left top corner of board (y, x)
         WINDOW *win = newwin(board_height, board_width, 0, 60);
+        int ascii_code;
 
-        box(win, 0, 0);
-        // Game title print
-        mvwprintw(win, 0, 10, " AVOID ENEMIES GAME ");
-        mvwprintw(win, 9, 9, " Press ENTER to start! ");
-        wrefresh(win);
+        // Loop for Restart game
+        do{
+            // Print starting screen
+            wclear(win);
+            box(win, 0, 0);
+            mvwprintw(win, 0, 10, " AVOID ENEMIES GAME ");
+            mvwprintw(win, 9, 9, " Press ENTER to start! ");
+            wrefresh(win);
 
-        while(wgetch(win) != 10);
+            // Wating for ENTER press
+            while(wgetch(win) != 10);
 
-        // Erase string
-        mvwprintw(win, 9, 10, "                       ");
-        wrefresh(win);
+            // Erase string
+            mvwprintw(win, 9, 10, "                       ");
+            wrefresh(win);
 
-        // Create enemies threads and start them
-        pthread_t enemies_threads[number_of_enemies];
-        int enemies_threads_args[number_of_enemies];
-        int result_code;
-        
-        for (int i = 0; i < number_of_enemies; i++) {
-            enemies_threads_args[i] = i;
-            result_code = pthread_create(&enemies_threads[i], NULL, enemy_work, &enemies_threads_args[i]);
+            // Create enemies threads and start them
+            pthread_t enemies_threads[number_of_enemies];
+            int enemies_threads_args[number_of_enemies];
+            int result_code;
+            
+            for (int i = 0; i < number_of_enemies; i++) {
+                enemies_threads_args[i] = i;
+                result_code = pthread_create(&enemies_threads[i], NULL, enemy_work, &enemies_threads_args[i]);
+                assert(!result_code);
+            }
+
+            // Create next thread to handle printing out signs at board
+            pthread_t window_handler;
+            result_code = pthread_create(&window_handler, NULL, window_handle, win);
             assert(!result_code);
-        }
 
-        // Create next thread to handle printing out signs at board
-        pthread_t window_handler;
-        result_code = pthread_create(&window_handler, NULL, window_handle, win);
-        assert(!result_code);
+            // Create next thread to handle keyboard
+            pthread_t keyboard_handler;
+            result_code = pthread_create(&keyboard_handler, NULL, keyboard_handle, win);
+            assert(!result_code);
 
-        // Create next thread to handle keyboard
-        pthread_t keyboard_handler;
-        result_code = pthread_create(&keyboard_handler, NULL, keyboard_handle, win);
-        assert(!result_code);
+            // Create thread to control collidation with enemies
+            pthread_t collidation_handler;
+            result_code = pthread_create(&collidation_handler, NULL, check_collidation_with_enemies, win);
+            assert(!result_code);
 
-        // Create thread to control collidation with enemies
-        pthread_t collidation_handler;
-        result_code = pthread_create(&collidation_handler, NULL, check_collidation_with_enemies, win);
-        assert(!result_code);
+            // Create thread intended for couning points
+            pthread_t points_handler;
+            result_code = pthread_create(&points_handler, NULL, count_points, NULL);
+            assert(!result_code);
 
-        // Create thread intended for couning points
-        pthread_t points_handler;
-        result_code = pthread_create(&points_handler, NULL, count_points, NULL);
-        assert(!result_code);
+            while(true){
 
-        while(true){
-            if(end_game){
+                if(end_game){
 
-                // Cancel threads
+                    // Cancel threads
+                    for (int i = 0; i < number_of_enemies; i++) {
+                        pthread_cancel(enemies_threads[i]);
+                        pthread_join(enemies_threads[i], NULL);
+                    }
 
-                for (int i = 0; i < number_of_enemies; i++) {
-                    pthread_cancel(enemies_threads[i]);
-                    pthread_join(enemies_threads[i], NULL);
-                }
+                    pthread_cancel(window_handler);
+                    pthread_join(window_handler, NULL);
 
-                pthread_cancel(window_handler);
-                pthread_join(window_handler, NULL);
+                    pthread_cancel(keyboard_handler);
+                    pthread_join(keyboard_handler, NULL);
 
-                pthread_cancel(keyboard_handler);
-                pthread_join(keyboard_handler, NULL);
+                    pthread_cancel(collidation_handler);
+                    pthread_join(collidation_handler, NULL);
 
-                pthread_cancel(collidation_handler);
-                pthread_join(collidation_handler, NULL);
+                    pthread_cancel(points_handler);
+                    pthread_join(points_handler, NULL);
 
-                pthread_cancel(points_handler);
-                pthread_join(points_handler, NULL);
+                    
+                    print_end_game(win);
 
+                    // Finish when ESC or restart when SPACE
+                    do{
+                        ascii_code = wgetch(win);
 
-                print_end_game(win);
+                    }while((ascii_code != 27) && (ascii_code != 32));
+                    break;
+                } 
+            }
 
-                int ascii;
-                // Finish when ESC
-                while((ascii = wgetch(win)) != 27){
-
-                    cout<<ascii;
-                }
-
-                break;
-            } 
-        }
+        // Restart when SPACE
+        }while(ascii_code == 32);
 
     endwin();
     return 0;
