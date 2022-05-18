@@ -170,7 +170,7 @@ void print_end_game(WINDOW* window){
 
     // Restart global data (prepare for possible game restart)
     restart_global_data();
-    usleep(500000);
+    usleep(1000000);
 
     // Print finish or restart message
     wclear(window);
@@ -250,7 +250,8 @@ void *window_handle(void *arguments){
         mvwprintw(window, 19, 15, scoresAsString.c_str());
         // Refresh window to see result
         wrefresh(window);
-        // Wait some time to see result (Note: this value is important and can't be to small because without this the window'll not displaying properly )
+        // Wait some time to see result (Note: this value is important and can't be to 
+        // small because without this the window'll not displaying properly )
         usleep(10000);
         
         // Covering printed out signs via " "
