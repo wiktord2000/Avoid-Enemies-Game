@@ -10,4 +10,4 @@ The simple game written in C/C++ based on ncurses and pthread library. You can m
 
 |<img src="Screenshots/end-game.png" alt="drawing" width="400"/> | <img src="Screenshots/message-after-lose.png" alt="drawing" width="400"/> |
 | :--: | :--: |
-| *Game over* | *Message after lose* |
+| *Game Over* | *Message after lose* |
